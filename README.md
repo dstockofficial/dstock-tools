@@ -43,7 +43,7 @@ By default, the script will **not** attempt admin-only compliance mutations. If 
 ### 2) Send to HyperEVM (LayerZero)
 
 ```bash
-npm run sendToHyperEvm -- CRCLd --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5
+npm run sendToHyperEvm -- CRCLd --to 0xYourRecipientAddress --amount 0.5
 ```
 
 ### 3) HyperEVM -> HyperCore (native HYPE only)
