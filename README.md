@@ -21,6 +21,11 @@ Configure environment:
 cp env.example .env
 ```
 
+The `.env` file should contain only:
+
+- `SRC_RPC_URL` (BSC mainnet RPC)
+- `PRIVATE_KEY` (0x-prefixed)
+
 Run the LayerZero OFT send script:
 
 ```bash
@@ -38,7 +43,7 @@ Note: this is intended for **native HYPE only**.
 Run the wrap script (ERC20 -> wrapper shares):
 
 ```bash
-npm run wrap -- CRCLd --amount 0.5 --yes
+npm run wrap -- CRCLd --underlying 0xYourUnderlyingErc20 --amount 0.5 --yes
 ```
 
 By default, the script will **not** attempt admin-only compliance mutations. If compliance checks are required and not satisfied, it will stop and tell you what needs to be set.
@@ -57,7 +62,9 @@ This repo includes a small address book for convenience. For example, on BSC you
 ## Project structure
 
 - `src/sendToHyperEvm.ts`: LayerZero OFT cross-chain send script
+- `src/sendToHyperCore.ts`: HyperEVM -> HyperCore transfer (native HYPE only)
 - `src/wrap.ts`: Wrap ERC20 into the wrapper token (with compliance preparation)
+- `src/config/*`: in-code chain/token registry (addresses hardcoded here)
 - `dist/*`: compiled output (after `npm run build`)
 
 ## Commands

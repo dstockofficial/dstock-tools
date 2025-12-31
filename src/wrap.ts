@@ -10,6 +10,8 @@ import {
   type Address
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { resolveComplianceAddress } from "./config/chains.js";
+import { requireToken } from "./config/tokens.js";
 
 function hasFlag(flag: string) {
   return process.argv.includes(flag);
@@ -67,12 +69,6 @@ type NamedAddress = {
   address: Address;
 };
 
-const DEFAULT_COMPLIANCE_BY_CHAIN_ID: Record<number, Address> = {
-  // BSC mainnet + Ethereum mainnet share the same Compliance in your deployment.
-  56: "0xA0f16686BaaBF2AA81A56404B61560be89EaD271",
-  1: "0xA0f16686BaaBF2AA81A56404B61560be89EaD271"
-};
-
 const KNOWN_WRAPPERS: NamedAddress[] = [
   // BSC mainnet wrappers
   { name: "crcld", chainId: 56, address: "0x8edE6AffCBe962e642f83d84b8Af66313A700dDf" }
@@ -101,13 +97,12 @@ function resolveWrapper(input: string | undefined, chainId: number): Address {
 }
 
 function resolveCompliance(input: string | undefined, chainId: number): Address {
-  if (!input) {
-    const fallback = DEFAULT_COMPLIANCE_BY_CHAIN_ID[chainId];
-    if (!fallback) throw new Error("Missing COMPLIANCE (or --compliance) and no default is configured for this chainId.");
-    return fallback;
+  if (input) {
+    // Kept for backward compatibility; but env/config no longer expects COMPLIANCE.
+    if (!isAddress(input)) throw new Error("Invalid COMPLIANCE (or --compliance)");
+    return input;
   }
-  if (!isAddress(input)) throw new Error("Invalid COMPLIANCE (or --compliance)");
-  return input;
+  return resolveComplianceAddress(chainId);
 }
 
 function requireAddress(input: string | undefined, label: string): Address {
@@ -206,8 +201,8 @@ const complianceAbi = [
 ] as const;
 
 async function main() {
-  const rpcUrl = env("RPC_URL") ?? env("SRC_RPC_URL");
-  if (!rpcUrl) throw new Error("Missing RPC_URL (or SRC_RPC_URL)");
+  const rpcUrl = env("SRC_RPC_URL");
+  if (!rpcUrl) throw new Error("Missing SRC_RPC_URL");
 
   const privateKey = env("PRIVATE_KEY") as `0x${string}` | undefined;
   if (!privateKey) throw new Error("Missing PRIVATE_KEY");
@@ -215,22 +210,32 @@ async function main() {
   const account = privateKeyToAccount(privateKey);
   const prepareCompliance = hasFlag("--prepare-compliance");
 
-  const to = (getArg("--to") ?? env("TO") ?? account.address) as Address;
+  const to = (getArg("--to") ?? account.address) as Address;
   if (!isAddress(to)) throw new Error("Invalid TO (or --to)");
 
   const publicClient = createPublicClient({ transport: http(rpcUrl) });
   const walletClient = createWalletClient({ account, transport: http(rpcUrl) });
   const chainId = await publicClient.getChainId();
 
-  // Wrapper must be provided by the user (do not read from .env).
-  // Supports either `--wrapper <NAME|ADDRESS>` or a positional arg: `<NAME|ADDRESS>`
-  const wrapperInput = getArg("--wrapper") ?? getPositionalArg(0);
-  const underlyingInput = getArg("--underlying") ?? env("UNDERLYING");
-  const complianceInput = getArg("--compliance") ?? env("COMPLIANCE");
+  // Token selection (wrapper is derived from token on BSC).
+  // Supports either `--token <NAME>` or a positional arg: `<NAME>`
+  const tokenInput = getArg("--token") ?? getPositionalArg(0);
+  const token = requireToken(tokenInput);
 
-  const wrapper = resolveWrapper(wrapperInput, chainId);
-  const underlying = requireAddress(underlyingInput, "UNDERLYING (or --underlying)");
-  const compliance = resolveCompliance(complianceInput, chainId);
+  const wrapper = token.bsc.wrapper;
+  const compliance = resolveCompliance(undefined, chainId);
+
+  // Underlying is token-specific. We keep an escape hatch for CLI override.
+  const underlyingFromConfig = token.bsc.underlying;
+  const underlyingInput = getArg("--underlying");
+  const underlying = underlyingInput
+    ? requireAddress(underlyingInput, "UNDERLYING (or --underlying)")
+    : underlyingFromConfig;
+  if (!underlying) {
+    throw new Error(
+      `Missing underlying for ${token.name}. Set it in src/config/tokens.ts (token.bsc.underlying) or pass --underlying <ERC20_ADDRESS>.`
+    );
+  }
 
   const decimals = await publicClient.readContract({
     address: underlying,
@@ -238,10 +243,10 @@ async function main() {
     functionName: "decimals"
   });
 
-  const amountWeiRaw = getArg("--amount-wei") ?? env("AMOUNT_WEI");
-  const amountHuman = getArg("--amount") ?? env("AMOUNT");
+  const amountWeiRaw = getArg("--amount-wei");
+  const amountHuman = getArg("--amount");
   if (!amountWeiRaw && !amountHuman) {
-    throw new Error('Missing amount: set AMOUNT_WEI / AMOUNT (or pass --amount-wei / --amount)');
+    throw new Error('Missing amount: pass --amount-wei / --amount');
   }
   const amountWei = amountWeiRaw ? BigInt(amountWeiRaw) : parseUnits(amountHuman!, decimals);
 

@@ -11,6 +11,7 @@ import {
   type Hex
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { requireToken } from "./config/tokens.js";
 
 function hasFlag(flag: string) {
   return process.argv.includes(flag);
@@ -231,30 +232,27 @@ const ioftAbi = [
 ] as const;
 
 async function main() {
-  const rpcUrl = env("SRC_RPC_URL") ?? env("RPC_URL") ?? env("RPC_URL_BSC_MAINNET");
-  if (!rpcUrl) throw new Error("Missing SRC_RPC_URL (or RPC_URL / RPC_URL_BSC_MAINNET)");
+  const rpcUrl = env("SRC_RPC_URL");
+  if (!rpcUrl) throw new Error("Missing SRC_RPC_URL");
 
-  const privateKey = (env("PRIVATE_KEY") ?? env("HL_PRIVATE_KEY") ?? env("HL_AGENT_PRIVATE_KEY")) as
-    | `0x${string}`
-    | undefined;
-  if (!privateKey) throw new Error("Missing PRIVATE_KEY (or HL_PRIVATE_KEY/HL_AGENT_PRIVATE_KEY)");
+  const privateKey = env("PRIVATE_KEY") as `0x${string}` | undefined;
+  if (!privateKey) throw new Error("Missing PRIVATE_KEY");
 
-  const dstEid = Number(env("DST_EID") ?? DEFAULT_DST_EID);
-  if (!Number.isFinite(dstEid)) throw new Error(`Invalid DST_EID: ${String(env("DST_EID"))}`);
+  const dstEid = DEFAULT_DST_EID;
 
-  // Command-line only needs receiver + amount (env still supported as fallback).
-  const to = (getArg("--to") ?? env("TO")) as `0x${string}` | undefined;
+  // Command-line needs receiver + amount.
+  const to = getArg("--to") as `0x${string}` | undefined;
   if (!to || !isAddress(to)) throw new Error("Missing/invalid --to (or TO)");
 
-  const amountHuman = getArg("--amount") ?? env("AMOUNT");
-  if (!amountHuman) throw new Error("Missing --amount (or AMOUNT) (human readable, e.g. 0.5)");
+  const amountHuman = getArg("--amount");
+  if (!amountHuman) throw new Error("Missing --amount (human readable, e.g. 0.5)");
 
-  const minAmountHuman = env("MIN_AMOUNT") ?? amountHuman;
+  const minAmountHuman = amountHuman;
 
-  // Optional, pass-through (already encoded)
-  const extraOptionsHex = (env("EXTRA_OPTIONS_HEX") ?? "0x") as Hex;
-  const composeMsgHex = (env("COMPOSE_MSG_HEX") ?? "0x") as Hex;
-  const oftCmdHex = (env("OFT_CMD_HEX") ?? "0x") as Hex;
+  // Optional, pass-through (already encoded) - kept as hardcoded defaults for now.
+  const extraOptionsHex = "0x" as Hex;
+  const composeMsgHex = "0x" as Hex;
+  const oftCmdHex = "0x" as Hex;
 
   const account = privateKeyToAccount(privateKey);
 
@@ -266,7 +264,9 @@ async function main() {
   // Require token/OFT selection from CLI (do not rely on env defaults).
   // Supports either `--token <NAME|ADDRESS>` / `--oft <NAME|ADDRESS>` or a positional arg: `<NAME|ADDRESS>`
   const tokenInput = getArg("--token") ?? getArg("--oft") ?? getPositionalArg(0);
-  const oftAddress = resolveOftAddress(tokenInput, chainId);
+  const token = requireToken(tokenInput);
+  if (chainId !== 56) throw new Error(`sendToHyperEvm currently expects BSC RPC (chainId=56), got chainId=${chainId}`);
+  const oftAddress = token.bsc.adapter;
 
   const underlying = (await publicClient.readContract({
     address: oftAddress,

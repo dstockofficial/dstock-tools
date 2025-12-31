@@ -38,20 +38,13 @@ function env(name: string): string | undefined {
 const HYPERCORE_DEPOSIT_ADDRESS = "0x2222222222222222222222222222222222222222" as const;
 
 async function main() {
-  const rpcUrl =
-    env("HYPEREVM_RPC_URL") ??
-    env("HYPERLIQUID_EVM_RPC_URL") ??
-    env("RPC_URL_HYPEREVM") ??
-    env("RPC_URL") ??
-    "https://rpc.hyperliquid.xyz/evm";
+  const rpcUrl = "https://rpc.hyperliquid.xyz/evm";
 
-  const privateKey = (env("PRIVATE_KEY") ?? env("HL_PRIVATE_KEY") ?? env("HL_AGENT_PRIVATE_KEY")) as
-    | `0x${string}`
-    | undefined;
-  if (!privateKey) throw new Error("Missing PRIVATE_KEY (or HL_PRIVATE_KEY/HL_AGENT_PRIVATE_KEY)");
+  const privateKey = env("PRIVATE_KEY") as `0x${string}` | undefined;
+  if (!privateKey) throw new Error("Missing PRIVATE_KEY");
 
-  const amountHuman = getArg("--amount") ?? env("AMOUNT");
-  if (!amountHuman) throw new Error("Missing --amount (or AMOUNT) (human readable, e.g. 1.25)");
+  const amountHuman = getArg("--amount");
+  if (!amountHuman) throw new Error("Missing --amount (human readable, e.g. 1.25)");
 
   const account = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({ transport: http(rpcUrl) });
