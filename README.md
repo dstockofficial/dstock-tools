@@ -43,7 +43,7 @@ Note: this is intended for **native HYPE only**.
 Run the wrap script (ERC20 -> wrapper shares):
 
 ```bash
-npm run wrap -- CRCLd --underlying 0xYourUnderlyingErc20 --amount 0.5 --yes
+npm run wrap -- CRCLd --amount 0.5 --yes
 ```
 
 By default, the script will **not** attempt admin-only compliance mutations. If compliance checks are required and not satisfied, it will stop and tell you what needs to be set.

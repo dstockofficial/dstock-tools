@@ -30,8 +30,8 @@ export const TOKENS: Record<string, TokenConfig> = {
     name: "CRCLd",
     bsc: {
       wrapper: "0x8edE6AffCBe962e642f83d84b8Af66313A700dDf",
-      adapter: "0xF351FA44A73E6D1E9c4C2927A8D2b8c69a8B8897"
-      // underlying: "0x..."  // TODO: fill this in
+      adapter: "0xF351FA44A73E6D1E9c4C2927A8D2b8c69a8B8897",
+      underlying: "0x992879cd8ce0c312d98648875b5a8d6d042cbf34"
     },
     hyperEvm: {
       oft: "0xe74aA6C4050A15790525eB11cc4562c664dC67C9"
