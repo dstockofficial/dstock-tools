@@ -9,6 +9,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "flow": "tsx src/flow.ts",
     "sendToHyperEvm": "tsx src/sendToHyperEvm.ts",
     "sendToHyperCore": "tsx src/sendToHyperCore.ts",
     "wrap": "tsx src/wrap.ts",

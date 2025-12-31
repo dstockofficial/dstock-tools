@@ -32,6 +32,12 @@ Recommended flow:
 2. Send to HyperEVM (LayerZero)
 3. Transfer native HYPE from HyperEVM -> HyperCore (credits your HyperCore spot balance)
 
+You can also run all 3 steps in one command (each step will still ask for confirmation, and the next step runs only if the previous one succeeds):
+
+```bash
+npm run flow -- CRCLd --to 0xYourRecipientAddress --amount 0.5
+```
+
 ### 1) Wrap (BSC)
 
 ```bash
