@@ -30,12 +30,12 @@ npm run sendToHyperEvm -- --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amou
 Run the wrap script (ERC20 -> wrapper shares):
 
 ```bash
-npm run wrap -- --amount 0.5 --yes
+npm run wrap -- CRCLd --amount 0.5 --yes
 ```
 
 This repo includes a small address book for convenience. For example, on BSC you can set:
 
-- `WRAPPER=CRCLd` (case-insensitive), instead of pasting the wrapper address
+- pass `CRCLd` (case-insensitive) as the wrapper name, instead of pasting the wrapper address
 - `COMPLIANCE` is optional on chainId **56** (BSC) and **1** (Ethereum) and will default automatically
 
 ## Project structure

@@ -20,6 +20,25 @@ function getArg(name: string): string | undefined {
   return idx >= 0 ? process.argv[idx + 1] : undefined;
 }
 
+function getPositionalArg(index: number): string | undefined {
+  // Returns the Nth positional arg after stripping out known flag patterns.
+  // Example: `npm run wrap -- CRCLd --amount 1.0` => positional[0] = "CRCLd"
+  const argv = process.argv.slice(2);
+  const positionals: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a) continue;
+    if (a.startsWith("-")) {
+      // Skip flag value if present
+      const next = argv[i + 1];
+      if (next && !next.startsWith("-")) i++;
+      continue;
+    }
+    positionals.push(a);
+  }
+  return positionals[index];
+}
+
 function env(name: string): string | undefined {
   const v = process.env[name];
   return v != null && v !== "" ? v : undefined;
@@ -202,7 +221,9 @@ async function main() {
   const walletClient = createWalletClient({ account, transport: http(rpcUrl) });
   const chainId = await publicClient.getChainId();
 
-  const wrapperInput = getArg("--wrapper") ?? env("WRAPPER");
+  // Wrapper must be provided by the user (do not read from .env).
+  // Supports either `--wrapper <NAME|ADDRESS>` or a positional arg: `<NAME|ADDRESS>`
+  const wrapperInput = getArg("--wrapper") ?? getPositionalArg(0);
   const underlyingInput = getArg("--underlying") ?? env("UNDERLYING");
   const complianceInput = getArg("--compliance") ?? env("COMPLIANCE");
 
