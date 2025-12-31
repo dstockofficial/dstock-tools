@@ -27,14 +27,22 @@ Run the LayerZero OFT send script:
 npm run sendToHyperEvm -- --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5 --yes
 ```
 
+Run the wrap script (ERC20 -> wrapper shares):
+
+```bash
+npm run wrap -- --amount 0.5 --yes
+```
+
 ## Project structure
 
 - `src/sendToHyperEvm.ts`: LayerZero OFT cross-chain send script
+- `src/wrap.ts`: Wrap ERC20 into the wrapper token (with compliance preparation)
 - `dist/*`: compiled output (after `npm run build`)
 
 ## Commands
 
 - `npm run sendToHyperEvm -- [...args]`: run the send script via TS runtime (`tsx`)
+- `npm run wrap -- [...args]`: run the wrap script via TS runtime (`tsx`)
 - `npm run typecheck`: typecheck only
 - `npm run build`: compile to `dist/`
 - `npm run clean`: delete `dist/`

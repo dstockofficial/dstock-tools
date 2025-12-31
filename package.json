@@ -10,6 +10,7 @@
   },
   "scripts": {
     "sendToHyperEvm": "tsx src/sendToHyperEvm.ts",
+    "wrap": "tsx src/wrap.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\""
