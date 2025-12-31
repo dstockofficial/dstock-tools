@@ -4,6 +4,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { createPublicClient, createWalletClient, http, isAddress, parseUnits, type Address, type Chain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { requireToken } from "./config/tokens.js";
+import { toAssetBridgeAddress } from "./config/hypercore.js";
 
 function hasFlag(flag: string) {
   return process.argv.includes(flag);
@@ -34,8 +35,8 @@ function env(name: string): string | undefined {
   return v != null && v !== "" ? v : undefined;
 }
 
-// Hyperliquid docs: sending native HYPE to this address credits your HyperCore spot balance.
-// WARNING: This mechanism is intended for HYPE only; sending other assets may be lost.
+// Generic deposit address (legacy / native HYPE).
+// For mapped spot assets, we derive the system/bridge address from tokenIndex.
 const HYPERCORE_DEPOSIT_ADDRESS = "0x2222222222222222222222222222222222222222" as const;
 
 const erc20Abi = [
@@ -68,7 +69,11 @@ async function main() {
   const privateKey = env("PRIVATE_KEY") as `0x${string}` | undefined;
   if (!privateKey) throw new Error("Missing PRIVATE_KEY");
 
-  const tokenInput = getArg("--token") ?? getArg("--asset") ?? getArg("--symbol") ?? process.argv.slice(2).find((a) => a && !a.startsWith("-"));
+  const tokenInput =
+    getArg("--token") ??
+    getArg("--asset") ??
+    getArg("--symbol") ??
+    process.argv.slice(2).find((a) => a && !a.startsWith("-"));
   if (!tokenInput) throw new Error("Missing token name (e.g. CRCLd).");
 
   const amountHuman = getArg("--amount");
@@ -81,20 +86,17 @@ async function main() {
   const chainId = await publicClient.getChainId();
   if (chainId !== 999) throw new Error(`Unexpected chainId=${chainId}. Expected HyperEVM chainId=999.`);
 
-  // If user passes an address, treat it as an ERC20 on HyperEVM; otherwise resolve via registry (e.g. CRCLd).
-  const tokenAddress: Address = isAddress(tokenInput)
-    ? (tokenInput as Address)
-    : requireToken(tokenInput).hyperEvm.oft;
+  // We need tokenIndex to derive the HyperCore system/bridge address, so normal usage requires a known token name.
+  // (Passing a raw ERC20 address is not supported here.)
+  if (isAddress(tokenInput)) {
+    throw new Error("Please pass a known token name (e.g. CRCLd) so we can derive the HyperCore bridge address from tokenIndex.");
+  }
 
-  const tokenMeta = isAddress(tokenInput) ? undefined : requireToken(tokenInput);
-
-  const depositOverride = getArg("--deposit") as Address | undefined;
-  if (depositOverride && !isAddress(depositOverride)) throw new Error("Invalid --deposit address");
+  const tokenMeta = requireToken(tokenInput);
+  const tokenAddress: Address = tokenMeta.hyperEvm.oft;
 
   const depositAddress: Address =
-    depositOverride ??
-    tokenMeta?.hyperCore.depositAddress ??
-    (HYPERCORE_DEPOSIT_ADDRESS as Address);
+    tokenMeta.hyperCore.depositAddress ?? toAssetBridgeAddress(tokenMeta.hyperCore.tokenIndex);
 
   const decimals = await publicClient.readContract({
     address: tokenAddress,
@@ -116,18 +118,15 @@ async function main() {
     chainId,
     from: account.address,
     to: depositAddress,
-    token: tokenMeta?.name ?? tokenInput,
-    tokenIndex: tokenMeta?.hyperCore.tokenIndex ?? null,
+    token: tokenMeta.name,
+    tokenIndex: tokenMeta.hyperCore.tokenIndex,
     tokenAddress,
     amountHuman,
     amountWei: amountWei.toString(),
     balanceWei: balance.toString(),
     note:
-      "This sends the HyperEVM token to a HyperCore deposit/bridge address. The token must be mapped to a HyperCore tokenIndex.",
-    note2:
-      tokenMeta?.hyperCore.depositAddress || depositOverride
-        ? null
-        : "No token-specific deposit address configured; falling back to 0x2222... which may only apply to native HYPE."
+      "This sends the HyperEVM token to the HyperCore system/bridge address derived from tokenIndex.",
+    legacyDepositAddress: HYPERCORE_DEPOSIT_ADDRESS
   };
 
   if (hasFlag("--dry-run")) {

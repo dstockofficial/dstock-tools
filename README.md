@@ -52,7 +52,7 @@ npm run sendToHyperEvm -- CRCLd --to 0xYourRecipientAddress --amount 0.5
 npm run sendToHyperCore -- CRCLd --amount 0.5
 ```
 
-Note: this step transfers the token on HyperEVM into HyperCore via the HyperCore deposit address. The token must be mapped on HyperCore (e.g. CRCLd -> tokenIndex 409).
+Note: this step transfers the token on HyperEVM into HyperCore via the HyperCore **system/bridge address derived from tokenIndex** (e.g. CRCLd -> tokenIndex 409).
 
 This repo includes a small address book for convenience. For example, on BSC you can set:
 
