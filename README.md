@@ -24,8 +24,16 @@ cp env.example .env
 Run the LayerZero OFT send script:
 
 ```bash
-npm run sendToHyperEvm -- --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5 --yes
+npm run sendToHyperEvm -- CRCLd --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5 --yes
 ```
+
+Transfer native HYPE from HyperEVM -> HyperCore (credits your HyperCore spot balance):
+
+```bash
+npm run sendToHyperCore -- --amount 1.0 --yes
+```
+
+Note: this is intended for **native HYPE only**.
 
 Run the wrap script (ERC20 -> wrapper shares):
 
@@ -55,6 +63,7 @@ This repo includes a small address book for convenience. For example, on BSC you
 ## Commands
 
 - `npm run sendToHyperEvm -- [...args]`: run the send script via TS runtime (`tsx`)
+- `npm run sendToHyperCore -- [...args]`: transfer native HYPE from HyperEVM to HyperCore
 - `npm run wrap -- [...args]`: run the wrap script via TS runtime (`tsx`)
 - `npm run typecheck`: typecheck only
 - `npm run build`: compile to `dist/`

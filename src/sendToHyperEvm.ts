@@ -21,6 +21,23 @@ function getArg(name: string): string | undefined {
   return idx >= 0 ? process.argv[idx + 1] : undefined;
 }
 
+function getPositionalArg(index: number): string | undefined {
+  // Example: `npm run sendToHyperEvm -- CRCLd --to ... --amount ...`
+  const argv = process.argv.slice(2);
+  const positionals: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a) continue;
+    if (a.startsWith("-")) {
+      const next = argv[i + 1];
+      if (next && !next.startsWith("-")) i++;
+      continue;
+    }
+    positionals.push(a);
+  }
+  return positionals[index];
+}
+
 async function confirmOrExit(summary: unknown) {
   if (hasFlag("--yes")) return;
   const rl = createInterface({ input, output });
@@ -48,10 +65,47 @@ function toBytes32Address(addr: Hex): Hex {
   return padHex(addr, { size: 32 });
 }
 
+type NamedAddress = {
+  name: string; // normalized (lowercase)
+  chainId: number;
+  address: `0x${string}`;
+};
+
+// Token name -> OFT/Adapter address on the SOURCE chain.
+// For your deployment: on BSC, "CRCLd" routes through the DStockOFTAdapter.
+const KNOWN_OFT_BY_CHAIN: NamedAddress[] = [
+  { name: "crcld", chainId: 56, address: "0xF351FA44A73E6D1E9c4C2927A8D2b8c69a8B8897" }
+];
+
+function normalizeName(s: string) {
+  return s.trim().toLowerCase();
+}
+
+function listKnownTokens(chainId: number) {
+  return KNOWN_OFT_BY_CHAIN.filter((t) => t.chainId === chainId).map((t) => t.name);
+}
+
+function resolveOftAddress(input: string | undefined, chainId: number): `0x${string}` {
+  if (!input) {
+    throw new Error(
+      'Missing token/OFT. Usage: `npm run sendToHyperEvm -- <TOKEN> --to <ADDR> --amount <HUMAN> [--yes]` (e.g. CRCLd)'
+    );
+  }
+  if (isAddress(input)) return input as `0x${string}`;
+
+  const name = normalizeName(input);
+  const match = KNOWN_OFT_BY_CHAIN.find((t) => t.chainId === chainId && t.name === name);
+  if (!match) {
+    const known = listKnownTokens(chainId);
+    const hint = known.length ? `Known tokens on this chain: ${known.join(", ")}` : "No known tokens configured for this chain.";
+    throw new Error(`Unknown token name: ${input}. ${hint}`);
+  }
+  return match.address;
+}
+
 // =============================
 // Defaults (edit these for your deployment)
 // =============================
-const DEFAULT_OFT_ADDRESS = "0xF351FA44A73E6D1E9c4C2927A8D2b8c69a8B8897" as const;
 const DEFAULT_DST_EID = 30367;
 
 // Minimal ABIs (no hardhat artifacts required)
@@ -185,10 +239,6 @@ async function main() {
     | undefined;
   if (!privateKey) throw new Error("Missing PRIVATE_KEY (or HL_PRIVATE_KEY/HL_AGENT_PRIVATE_KEY)");
 
-  // Allow overriding defaults via env, but you generally don't need to pass these on the command line.
-  const oftAddress = (env("OFT_ADDRESS") ?? DEFAULT_OFT_ADDRESS) as `0x${string}`;
-  if (!isAddress(oftAddress)) throw new Error(`Invalid OFT_ADDRESS: ${oftAddress}`);
-
   const dstEid = Number(env("DST_EID") ?? DEFAULT_DST_EID);
   if (!Number.isFinite(dstEid)) throw new Error(`Invalid DST_EID: ${String(env("DST_EID"))}`);
 
@@ -212,6 +262,11 @@ async function main() {
   const walletClient = createWalletClient({ account, transport: http(rpcUrl) });
 
   const chainId = await publicClient.getChainId();
+
+  // Require token/OFT selection from CLI (do not rely on env defaults).
+  // Supports either `--token <NAME|ADDRESS>` / `--oft <NAME|ADDRESS>` or a positional arg: `<NAME|ADDRESS>`
+  const tokenInput = getArg("--token") ?? getArg("--oft") ?? getPositionalArg(0);
+  const oftAddress = resolveOftAddress(tokenInput, chainId);
 
   const underlying = (await publicClient.readContract({
     address: oftAddress,
