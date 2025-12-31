@@ -1,7 +1,15 @@
 import "dotenv/config";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { createPublicClient, createWalletClient, http, isAddress, parseUnits, type Address, type Chain } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  isAddress,
+  parseUnits,
+  type Address,
+  type Chain
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { requireToken } from "./config/tokens.js";
 import { toAssetBridgeAddress } from "./config/hypercore.js";
@@ -86,6 +94,18 @@ async function main() {
   const chainId = await publicClient.getChainId();
   if (chainId !== 999) throw new Error(`Unexpected chainId=${chainId}. Expected HyperEVM chainId=999.`);
 
+  // Pre-check native HYPE balance for gas (required to send the ERC20 transfer).
+  // If you don't have enough HYPE, we stop early with a clear message.
+  const nativeBalanceWei = await publicClient.getBalance({ address: account.address });
+  const minGasWei = parseUnits("0.01", 18);
+  if (nativeBalanceWei < minGasWei) {
+    console.error(
+      `Insufficient native HYPE for gas on HyperEVM. balance=${nativeBalanceWei.toString()} wei (< 0.01 HYPE).`
+    );
+    console.error("Please deposit some HYPE to your HyperEVM address to pay gas, then retry.");
+    process.exit(1);
+  }
+
   // We need tokenIndex to derive the HyperCore system/bridge address, so normal usage requires a known token name.
   // (Passing a raw ERC20 address is not supported here.)
   if (isAddress(tokenInput)) {
@@ -124,6 +144,7 @@ async function main() {
     amountHuman,
     amountWei: amountWei.toString(),
     balanceWei: balance.toString(),
+    nativeHypeBalanceWei: nativeBalanceWei.toString(),
     note:
       "This sends the HyperEVM token to the HyperCore system/bridge address derived from tokenIndex.",
     legacyDepositAddress: HYPERCORE_DEPOSIT_ADDRESS
@@ -139,12 +160,16 @@ async function main() {
 
   if (balance < amountWei) throw new Error("INSUFFICIENT_TOKEN_BALANCE_FOR_TRANSFER");
 
-  const hash = await walletClient.writeContract({
+  // Simulate first to get a correct gas estimate (avoid "intrinsic gas too low").
+  const { request } = await publicClient.simulateContract({
+    account,
     address: tokenAddress,
     abi: erc20Abi,
     functionName: "transfer",
     args: [depositAddress, amountWei]
   });
+
+  const hash = await walletClient.writeContract(request);
 
   console.log("tx =", hash);
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
