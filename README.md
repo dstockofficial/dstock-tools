@@ -26,27 +26,33 @@ The `.env` file should contain only:
 - `SRC_RPC_URL` (BSC mainnet RPC)
 - `PRIVATE_KEY` (0x-prefixed)
 
-Run the LayerZero OFT send script:
+Recommended flow:
 
-```bash
-npm run sendToHyperEvm -- CRCLd --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5 --yes
-```
+1. Wrap on BSC (ERC20 -> wrapper shares)
+2. Send to HyperEVM (LayerZero)
+3. Transfer native HYPE from HyperEVM -> HyperCore (credits your HyperCore spot balance)
 
-Transfer native HYPE from HyperEVM -> HyperCore (credits your HyperCore spot balance):
-
-```bash
-npm run sendToHyperCore -- --amount 1.0 --yes
-```
-
-Note: this is intended for **native HYPE only**.
-
-Run the wrap script (ERC20 -> wrapper shares):
+### 1) Wrap (BSC)
 
 ```bash
 npm run wrap -- CRCLd --amount 0.5 --yes
 ```
 
 By default, the script will **not** attempt admin-only compliance mutations. If compliance checks are required and not satisfied, it will stop and tell you what needs to be set.
+
+### 2) Send to HyperEVM (LayerZero)
+
+```bash
+npm run sendToHyperEvm -- CRCLd --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5 --yes
+```
+
+### 3) HyperEVM -> HyperCore (native HYPE only)
+
+```bash
+npm run sendToHyperCore -- --amount 1.0 --yes
+```
+
+Note: this is intended for **native HYPE only**.
 
 This repo includes a small address book for convenience. For example, on BSC you can set:
 
