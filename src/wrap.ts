@@ -409,7 +409,9 @@ async function main() {
 
   // ===== Wrap =====
   const { request, result } = await publicClient.simulateContract({
-    account: account.address,
+    // IMPORTANT: pass LocalAccount so viem signs locally and uses eth_sendRawTransaction.
+    // If we pass an address string, viem will try eth_sendTransaction (not supported on many public RPCs).
+    account,
     address: wrapper,
     abi: wrapperAbi,
     functionName: "wrap",
