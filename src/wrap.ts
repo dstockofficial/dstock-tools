@@ -42,6 +42,61 @@ async function confirmOrExit(summary: unknown) {
 
 const MAX_UINT256 = (1n << 256n) - 1n;
 
+type NamedAddress = {
+  name: string; // normalized (lowercase) name
+  chainId: number;
+  address: Address;
+};
+
+const DEFAULT_COMPLIANCE_BY_CHAIN_ID: Record<number, Address> = {
+  // BSC mainnet + Ethereum mainnet share the same Compliance in your deployment.
+  56: "0xA0f16686BaaBF2AA81A56404B61560be89EaD271",
+  1: "0xA0f16686BaaBF2AA81A56404B61560be89EaD271"
+};
+
+const KNOWN_WRAPPERS: NamedAddress[] = [
+  // BSC mainnet wrappers
+  { name: "crcld", chainId: 56, address: "0x8edE6AffCBe962e642f83d84b8Af66313A700dDf" }
+];
+
+function normalizeName(s: string) {
+  return s.trim().toLowerCase();
+}
+
+function listKnownWrappers(chainId: number) {
+  return KNOWN_WRAPPERS.filter((w) => w.chainId === chainId).map((w) => w.name);
+}
+
+function resolveWrapper(input: string | undefined, chainId: number): Address {
+  if (!input) throw new Error("Missing WRAPPER (or --wrapper)");
+  if (isAddress(input)) return input;
+
+  const name = normalizeName(input);
+  const match = KNOWN_WRAPPERS.find((w) => w.chainId === chainId && w.name === name);
+  if (!match) {
+    const known = listKnownWrappers(chainId);
+    const hint = known.length ? `Known wrappers on this chain: ${known.join(", ")}` : "No known wrappers configured for this chain.";
+    throw new Error(`Unknown wrapper name: ${input}. ${hint}`);
+  }
+  return match.address;
+}
+
+function resolveCompliance(input: string | undefined, chainId: number): Address {
+  if (!input) {
+    const fallback = DEFAULT_COMPLIANCE_BY_CHAIN_ID[chainId];
+    if (!fallback) throw new Error("Missing COMPLIANCE (or --compliance) and no default is configured for this chainId.");
+    return fallback;
+  }
+  if (!isAddress(input)) throw new Error("Invalid COMPLIANCE (or --compliance)");
+  return input;
+}
+
+function requireAddress(input: string | undefined, label: string): Address {
+  if (!input) throw new Error(`Missing ${label}`);
+  if (!isAddress(input)) throw new Error(`Invalid ${label}`);
+  return input;
+}
+
 const erc20Abi = [
   { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
@@ -138,14 +193,6 @@ async function main() {
   const privateKey = env("PRIVATE_KEY") as `0x${string}` | undefined;
   if (!privateKey) throw new Error("Missing PRIVATE_KEY");
 
-  const wrapper = (getArg("--wrapper") ?? env("WRAPPER")) as Address | undefined;
-  const underlying = (getArg("--underlying") ?? env("UNDERLYING")) as Address | undefined;
-  const compliance = (getArg("--compliance") ?? env("COMPLIANCE")) as Address | undefined;
-
-  if (!wrapper || !isAddress(wrapper)) throw new Error("Missing/invalid WRAPPER (or --wrapper)");
-  if (!underlying || !isAddress(underlying)) throw new Error("Missing/invalid UNDERLYING (or --underlying)");
-  if (!compliance || !isAddress(compliance)) throw new Error("Missing/invalid COMPLIANCE (or --compliance)");
-
   const account = privateKeyToAccount(privateKey);
 
   const to = (getArg("--to") ?? env("TO") ?? account.address) as Address;
@@ -154,6 +201,14 @@ async function main() {
   const publicClient = createPublicClient({ transport: http(rpcUrl) });
   const walletClient = createWalletClient({ account, transport: http(rpcUrl) });
   const chainId = await publicClient.getChainId();
+
+  const wrapperInput = getArg("--wrapper") ?? env("WRAPPER");
+  const underlyingInput = getArg("--underlying") ?? env("UNDERLYING");
+  const complianceInput = getArg("--compliance") ?? env("COMPLIANCE");
+
+  const wrapper = resolveWrapper(wrapperInput, chainId);
+  const underlying = requireAddress(underlyingInput, "UNDERLYING (or --underlying)");
+  const compliance = resolveCompliance(complianceInput, chainId);
 
   const decimals = await publicClient.readContract({
     address: underlying,

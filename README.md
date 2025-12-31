@@ -33,6 +33,11 @@ Run the wrap script (ERC20 -> wrapper shares):
 npm run wrap -- --amount 0.5 --yes
 ```
 
+This repo includes a small address book for convenience. For example, on BSC you can set:
+
+- `WRAPPER=CRCLd` (case-insensitive), instead of pasting the wrapper address
+- `COMPLIANCE` is optional on chainId **56** (BSC) and **1** (Ethereum) and will default automatically
+
 ## Project structure
 
 - `src/sendToHyperEvm.ts`: LayerZero OFT cross-chain send script
