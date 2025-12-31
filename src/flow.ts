@@ -81,6 +81,13 @@ async function pollUntil<T>(
   }
 }
 
+function formatElapsedMs(ms: number) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m > 0 ? `${m}m${r}s` : `${r}s`;
+}
+
 async function fetchHyperCoreSpotTotal(user: string, tokenIndex: number): Promise<string | null> {
   const res = await fetch("https://api.hyperliquid.xyz/info", {
     method: "POST",
@@ -121,6 +128,17 @@ async function main() {
 
   const account = privateKeyToAccount(privateKey);
   const tokenMeta = requireToken(token);
+
+  // The flow assumes the HyperEVM recipient is controlled by the same PRIVATE_KEY,
+  // because step 3 needs to transfer the token out from that address.
+  if (to.toLowerCase() !== account.address.toLowerCase()) {
+    throw new Error(
+      `--to must equal the EVM address of PRIVATE_KEY for this flow.\n` +
+        `to=${to}\n` +
+        `signer=${account.address}\n` +
+        `Otherwise step 3 cannot transfer the token to HyperCore.`
+    );
+  }
 
   // Step 1: wrap on BSC
   const bscClient = createPublicClient({ chain: bsc, transport: http(srcRpcUrl) });
@@ -192,10 +210,16 @@ async function main() {
 
   if (!isDryRun) {
     const minExpected = (sendAmountWei * 999n) / 1000n; // allow 0.1% tolerance
+    const expectedAtLeast = hyperBalBefore + minExpected;
+
+    const started = Date.now();
+    let lastPrintedAt = 0;
+    let lastSeen = hyperBalBefore;
+
     await pollUntil(
       "HyperEVM token balance credited",
-      async () =>
-        await hyperEvmClient.readContract({
+      async () => {
+        const bal = await hyperEvmClient.readContract({
           address: tokenMeta.hyperEvm.oft,
           abi: [
             {
@@ -208,9 +232,25 @@ async function main() {
           ] as const,
           functionName: "balanceOf",
           args: [to]
-        }),
-      (bal) => bal >= hyperBalBefore + minExpected,
-      { timeoutMs: 20 * 60_000, intervalMs: 5_000 }
+        });
+
+        const now = Date.now();
+        const shouldPrint =
+          now - lastPrintedAt > 5_000 || // print at most every 5s
+          bal !== lastSeen; // or when balance changes
+        if (shouldPrint && bal < expectedAtLeast) {
+          lastPrintedAt = now;
+          lastSeen = bal;
+          console.log(
+            `[flow] Waiting for HyperEVM credit... elapsed=${formatElapsedMs(now - started)} ` +
+              `current=${bal.toString()} expected>=${expectedAtLeast.toString()}`
+          );
+        }
+        return bal;
+      },
+      (bal) => bal >= expectedAtLeast,
+      // poll every 1 second, and keep waiting "until it arrives"
+      { timeoutMs: 24 * 60 * 60_000, intervalMs: 1_000 }
     );
   }
 
