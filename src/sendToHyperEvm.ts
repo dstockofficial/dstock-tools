@@ -8,9 +8,11 @@ import {
   isAddress,
   padHex,
   parseUnits,
+  type Chain,
   type Hex
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { bsc } from "viem/chains";
 import { requireToken } from "./config/tokens.js";
 
 function hasFlag(flag: string) {
@@ -257,15 +259,15 @@ async function main() {
   const account = privateKeyToAccount(privateKey);
 
   const publicClient = createPublicClient({ transport: http(rpcUrl) });
-  const walletClient = createWalletClient({ account, transport: http(rpcUrl) });
-
   const chainId = await publicClient.getChainId();
+  if (chainId !== 56) throw new Error(`sendToHyperEvm expects BSC RPC (chainId=56), got chainId=${chainId}`);
+  const chain: Chain = bsc;
+  const walletClient = createWalletClient({ account, chain, transport: http(rpcUrl) });
 
   // Require token/OFT selection from CLI (do not rely on env defaults).
   // Supports either `--token <NAME|ADDRESS>` / `--oft <NAME|ADDRESS>` or a positional arg: `<NAME|ADDRESS>`
   const tokenInput = getArg("--token") ?? getArg("--oft") ?? getPositionalArg(0);
   const token = requireToken(tokenInput);
-  if (chainId !== 56) throw new Error(`sendToHyperEvm currently expects BSC RPC (chainId=56), got chainId=${chainId}`);
   const oftAddress = token.bsc.adapter;
 
   const underlying = (await publicClient.readContract({
@@ -308,8 +310,7 @@ async function main() {
         address: underlying,
         abi: erc20Abi,
         functionName: "approve",
-        args: [oftAddress, amountLD],
-        chain: undefined
+            args: [oftAddress, amountLD]
       });
       console.log("approve tx =", approveHash);
       await publicClient.waitForTransactionReceipt({ hash: approveHash });
@@ -365,8 +366,7 @@ async function main() {
     abi: ioftAbi,
     functionName: "send",
     args: [sendParam, msgFee, account.address],
-    value: msgFee.nativeFee,
-    chain: undefined
+    value: msgFee.nativeFee
   });
 
   console.log("send tx =", hash);

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { createPublicClient, createWalletClient, http, parseUnits } from "viem";
+import { createPublicClient, createWalletClient, http, parseUnits, type Chain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 function hasFlag(flag: string) {
@@ -39,6 +39,15 @@ const HYPERCORE_DEPOSIT_ADDRESS = "0x2222222222222222222222222222222222222222" a
 
 async function main() {
   const rpcUrl = "https://rpc.hyperliquid.xyz/evm";
+  const chain: Chain = {
+    id: 999,
+    name: "HyperEVM",
+    nativeCurrency: { name: "HYPE", symbol: "HYPE", decimals: 18 },
+    rpcUrls: {
+      default: { http: [rpcUrl] },
+      public: { http: [rpcUrl] }
+    }
+  };
 
   const privateKey = env("PRIVATE_KEY") as `0x${string}` | undefined;
   if (!privateKey) throw new Error("Missing PRIVATE_KEY");
@@ -48,7 +57,7 @@ async function main() {
 
   const account = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({ transport: http(rpcUrl) });
-  const walletClient = createWalletClient({ account, transport: http(rpcUrl) });
+  const walletClient = createWalletClient({ account, chain, transport: http(rpcUrl) });
 
   const chainId = await publicClient.getChainId();
   const value = parseUnits(amountHuman, 18);

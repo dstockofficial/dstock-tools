@@ -7,9 +7,11 @@ import {
   http,
   isAddress,
   parseUnits,
-  type Address
+  type Address,
+  type Chain
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { bsc, mainnet } from "viem/chains";
 import { resolveComplianceAddress } from "./config/chains.js";
 import { requireToken } from "./config/tokens.js";
 
@@ -214,8 +216,10 @@ async function main() {
   if (!isAddress(to)) throw new Error("Invalid TO (or --to)");
 
   const publicClient = createPublicClient({ transport: http(rpcUrl) });
-  const walletClient = createWalletClient({ account, transport: http(rpcUrl) });
   const chainId = await publicClient.getChainId();
+  const chain: Chain | undefined = chainId === 56 ? bsc : chainId === 1 ? mainnet : undefined;
+  if (!chain) throw new Error(`Unsupported chainId=${chainId}. Expected 56 (BSC) or 1 (Ethereum).`);
+  const walletClient = createWalletClient({ account, chain, transport: http(rpcUrl) });
 
   // Token selection (wrapper is derived from token on BSC).
   // Supports either `--token <NAME>` or a positional arg: `<NAME>`
@@ -344,8 +348,7 @@ async function main() {
           address: compliance,
           abi: complianceAbi,
           functionName: "setCustody",
-          args: [to, true],
-          chain: undefined
+          args: [to, true]
         });
         console.log("setCustody tx =", tx);
         await publicClient.waitForTransactionReceipt({ hash: tx });
@@ -362,8 +365,7 @@ async function main() {
           address: compliance,
           abi: complianceAbi,
           functionName: "setKyc",
-          args: [account.address, true],
-          chain: undefined
+          args: [account.address, true]
         });
         console.log("setKyc tx =", tx);
         await publicClient.waitForTransactionReceipt({ hash: tx });
@@ -398,8 +400,7 @@ async function main() {
       address: underlying,
       abi: erc20Abi,
       functionName: "approve",
-      args: [wrapper, MAX_UINT256],
-      chain: undefined
+      args: [wrapper, MAX_UINT256]
     });
     console.log("approve tx =", approveHash);
     await publicClient.waitForTransactionReceipt({ hash: approveHash });
@@ -417,10 +418,7 @@ async function main() {
 
   const [net, mintedShares] = result;
 
-  const wrapHash = await walletClient.writeContract({
-    ...request,
-    chain: undefined
-  });
+  const wrapHash = await walletClient.writeContract(request);
 
   console.log("wrap tx =", wrapHash);
   await publicClient.waitForTransactionReceipt({ hash: wrapHash });
