@@ -2,7 +2,7 @@ import "dotenv/config";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { createPublicClient, http, isAddress, parseUnits } from "viem";
+import { createPublicClient, formatUnits, http, isAddress, parseUnits } from "viem";
 import { bsc } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { requireToken } from "./config/tokens.js";
@@ -209,8 +209,9 @@ async function main() {
   await runStep("sendToHyperEvm", "src/sendToHyperEvm.ts", [token, "--to", to, "--amount", sendAmount, ...dryRun]);
 
   if (!isDryRun) {
-    const minExpected = (sendAmountWei * 999n) / 1000n; // allow 0.1% tolerance
-    const expectedAtLeast = hyperBalBefore + minExpected;
+    // Fees are paid in native gas (HYPE/BNB), not in the bridged token amount.
+    // So we wait for the full credited amount.
+    const expectedAtLeast = hyperBalBefore + sendAmountWei;
 
     const started = Date.now();
     let lastPrintedAt = 0;
@@ -241,9 +242,11 @@ async function main() {
         if (shouldPrint && bal < expectedAtLeast) {
           lastPrintedAt = now;
           lastSeen = bal;
+          const currentHuman = formatUnits(bal, tokenDecimals);
+          const expectedHuman = formatUnits(expectedAtLeast, tokenDecimals);
           console.log(
             `[flow] Waiting for HyperEVM credit... elapsed=${formatElapsedMs(now - started)} ` +
-              `current=${bal.toString()} expected>=${expectedAtLeast.toString()}`
+              `current=${currentHuman} expected>=${expectedHuman} token=${tokenMeta.name}`
           );
         }
         return bal;
