@@ -21,6 +21,9 @@ export type TokenConfig = {
   // HyperCore
   hyperCore: {
     tokenIndex: number;
+    // Optional token-specific HyperCore deposit/bridge address (if required).
+    // If omitted, scripts may fall back to the generic deposit address (0x2222...) which might only apply to native HYPE.
+    depositAddress?: Address;
   };
 };
 

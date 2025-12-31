@@ -88,6 +88,14 @@ async function main() {
 
   const tokenMeta = isAddress(tokenInput) ? undefined : requireToken(tokenInput);
 
+  const depositOverride = getArg("--deposit") as Address | undefined;
+  if (depositOverride && !isAddress(depositOverride)) throw new Error("Invalid --deposit address");
+
+  const depositAddress: Address =
+    depositOverride ??
+    tokenMeta?.hyperCore.depositAddress ??
+    (HYPERCORE_DEPOSIT_ADDRESS as Address);
+
   const decimals = await publicClient.readContract({
     address: tokenAddress,
     abi: erc20Abi,
@@ -107,14 +115,19 @@ async function main() {
     rpcUrl,
     chainId,
     from: account.address,
-    to: HYPERCORE_DEPOSIT_ADDRESS,
+    to: depositAddress,
     token: tokenMeta?.name ?? tokenInput,
     tokenIndex: tokenMeta?.hyperCore.tokenIndex ?? null,
     tokenAddress,
     amountHuman,
     amountWei: amountWei.toString(),
     balanceWei: balance.toString(),
-    note: "This sends the HyperEVM token to the HyperCore deposit address. The token must be mapped to a HyperCore tokenIndex."
+    note:
+      "This sends the HyperEVM token to a HyperCore deposit/bridge address. The token must be mapped to a HyperCore tokenIndex.",
+    note2:
+      tokenMeta?.hyperCore.depositAddress || depositOverride
+        ? null
+        : "No token-specific deposit address configured; falling back to 0x2222... which may only apply to native HYPE."
   };
 
   if (hasFlag("--dry-run")) {
@@ -131,7 +144,7 @@ async function main() {
     address: tokenAddress,
     abi: erc20Abi,
     functionName: "transfer",
-    args: [HYPERCORE_DEPOSIT_ADDRESS, amountWei]
+    args: [depositAddress, amountWei]
   });
 
   console.log("tx =", hash);
