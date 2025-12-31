@@ -213,6 +213,7 @@ async function main() {
   if (!privateKey) throw new Error("Missing PRIVATE_KEY");
 
   const account = privateKeyToAccount(privateKey);
+  const prepareCompliance = hasFlag("--prepare-compliance");
 
   const to = (getArg("--to") ?? env("TO") ?? account.address) as Address;
   if (!isAddress(to)) throw new Error("Invalid TO (or --to)");
@@ -255,6 +256,28 @@ async function main() {
   const wrapToCustodyOnly = flags[3];
   const kycOnWrap = flags[5];
 
+  // Read current compliance states (only when the corresponding flag is enabled).
+  const isCustody = wrapToCustodyOnly
+    ? await publicClient.readContract({
+        address: compliance,
+        abi: complianceAbi,
+        functionName: "custody",
+        args: [to]
+      })
+    : null;
+
+  const isKyc = kycOnWrap
+    ? await publicClient.readContract({
+        address: compliance,
+        abi: complianceAbi,
+        functionName: "kyc",
+        args: [account.address]
+      })
+    : null;
+
+  const needSetCustody = wrapToCustodyOnly && isCustody === false;
+  const needSetKyc = kycOnWrap && isKyc === false;
+
   const summary = {
     rpcUrl,
     chainId,
@@ -263,6 +286,7 @@ async function main() {
     wrapper,
     underlying,
     compliance,
+    prepareCompliance,
     decimals,
     amountHuman: amountHuman ?? null,
     amountWei: amountWei.toString(),
@@ -274,6 +298,12 @@ async function main() {
       unwrapFromCustodyOnly: flags[4],
       kycOnWrap: flags[5],
       kycOnUnwrap: flags[6]
+    },
+    complianceState: {
+      isCustody,
+      isKyc,
+      needSetCustody,
+      needSetKyc
     }
   };
 
@@ -285,46 +315,58 @@ async function main() {
 
   await confirmOrExit(summary);
 
-  // ===== Prepare compliance =====
-  if (wrapToCustodyOnly) {
-    const isCustody = await publicClient.readContract({
-      address: compliance,
-      abi: complianceAbi,
-      functionName: "custody",
-      args: [to]
-    });
-    if (!isCustody) {
-      const tx = await walletClient.writeContract({
-        address: compliance,
-        abi: complianceAbi,
-        functionName: "setCustody",
-        args: [to, true],
-        chain: undefined
-      });
-      console.log("setCustody tx =", tx);
-      await publicClient.waitForTransactionReceipt({ hash: tx });
-      console.log("setCustody confirmed");
-    }
+  // ===== Prepare compliance (admin-only on most deployments) =====
+  // We do NOT attempt admin mutations unless explicitly asked.
+  if ((needSetCustody || needSetKyc) && !prepareCompliance) {
+    const missing: string[] = [];
+    if (needSetCustody) missing.push("custody(TO) = true");
+    if (needSetKyc) missing.push("kyc(CALLER) = true");
+    console.error("");
+    console.error("Compliance requirements are not satisfied:");
+    for (const m of missing) console.error(`- ${m}`);
+    console.error("");
+    console.error(
+      'If you have admin permissions on the Compliance contract, re-run with "--prepare-compliance".'
+    );
+    console.error("Otherwise, ask the Compliance admin to set these flags for you.");
+    process.exit(1);
   }
 
-  if (kycOnWrap) {
-    const isKyc = await publicClient.readContract({
-      address: compliance,
-      abi: complianceAbi,
-      functionName: "kyc",
-      args: [account.address]
-    });
-    if (!isKyc) {
-      const tx = await walletClient.writeContract({
-        address: compliance,
-        abi: complianceAbi,
-        functionName: "setKyc",
-        args: [account.address, true],
-        chain: undefined
-      });
-      console.log("setKyc tx =", tx);
-      await publicClient.waitForTransactionReceipt({ hash: tx });
-      console.log("setKyc confirmed");
+  if (prepareCompliance) {
+    if (needSetCustody) {
+      try {
+        const tx = await walletClient.writeContract({
+          address: compliance,
+          abi: complianceAbi,
+          functionName: "setCustody",
+          args: [to, true],
+          chain: undefined
+        });
+        console.log("setCustody tx =", tx);
+        await publicClient.waitForTransactionReceipt({ hash: tx });
+        console.log("setCustody confirmed");
+      } catch (err) {
+        console.error("Failed to setCustody. You may not have permission on the Compliance contract.");
+        throw err;
+      }
+    }
+
+    if (needSetKyc) {
+      try {
+        const tx = await walletClient.writeContract({
+          address: compliance,
+          abi: complianceAbi,
+          functionName: "setKyc",
+          args: [account.address, true],
+          chain: undefined
+        });
+        console.log("setKyc tx =", tx);
+        await publicClient.waitForTransactionReceipt({ hash: tx });
+        console.log("setKyc confirmed");
+      } catch (err) {
+        console.error("Failed to setKyc. You may not have permission on the Compliance contract.");
+        throw err;
+      }
     }
   }
 
