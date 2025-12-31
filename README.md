@@ -15,33 +15,26 @@ Install dependencies:
 npm install
 ```
 
-Run a script by name:
+Configure environment:
 
 ```bash
-npm run run -- hello --name "Ada"
+cp env.example .env
 ```
 
-List available scripts:
+Run the LayerZero OFT send script:
 
 ```bash
-npm run run -- --help
+npm run sendToHyperEvm -- --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5 --yes
 ```
 
 ## Project structure
 
-- `src/run.ts`: script entrypoint / router
-- `src/scripts/*`: individual scripts (each exports a `run(args)` function)
+- `src/sendToHyperEvm.ts`: LayerZero OFT cross-chain send script
 - `dist/*`: compiled output (after `npm run build`)
-
-## Adding a new script
-
-1. Create a new file: `src/scripts/my-script.ts`
-2. Export a `run(args: string[])` function
-3. Register it in `src/run.ts`
 
 ## Commands
 
-- `npm run run -- <script> [...args]`: run a script via TS runtime (`tsx`)
+- `npm run sendToHyperEvm -- [...args]`: run the send script via TS runtime (`tsx`)
 - `npm run typecheck`: typecheck only
 - `npm run build`: compile to `dist/`
 - `npm run clean`: delete `dist/`
