@@ -1,8 +1,9 @@
 import "dotenv/config";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { createPublicClient, createWalletClient, http, parseUnits, type Chain } from "viem";
+import { createPublicClient, createWalletClient, http, isAddress, parseUnits, type Address, type Chain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { requireToken } from "./config/tokens.js";
 
 function hasFlag(flag: string) {
   return process.argv.includes(flag);
@@ -17,7 +18,7 @@ async function confirmOrExit(summary: unknown) {
   if (hasFlag("--yes")) return;
   const rl = createInterface({ input, output });
   try {
-    output.write(`\nAbout to transfer HYPE from HyperEVM -> HyperCore:\n${JSON.stringify(summary, null, 2)}\n\n`);
+    output.write(`\nAbout to transfer from HyperEVM -> HyperCore:\n${JSON.stringify(summary, null, 2)}\n\n`);
     const ans = (await rl.question('Type "YES" to confirm: ')).trim();
     if (ans !== "YES") {
       console.log("Cancelled.");
@@ -37,6 +38,21 @@ function env(name: string): string | undefined {
 // WARNING: This mechanism is intended for HYPE only; sending other assets may be lost.
 const HYPERCORE_DEPOSIT_ADDRESS = "0x2222222222222222222222222222222222222222" as const;
 
+const erc20Abi = [
+  { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "transfer",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    outputs: [{ type: "bool" }]
+  }
+] as const;
+
 async function main() {
   const rpcUrl = "https://rpc.hyperliquid.xyz/evm";
   const chain: Chain = {
@@ -52,6 +68,9 @@ async function main() {
   const privateKey = env("PRIVATE_KEY") as `0x${string}` | undefined;
   if (!privateKey) throw new Error("Missing PRIVATE_KEY");
 
+  const tokenInput = getArg("--token") ?? getArg("--asset") ?? getArg("--symbol") ?? process.argv.slice(2).find((a) => a && !a.startsWith("-"));
+  if (!tokenInput) throw new Error("Missing token name (e.g. CRCLd).");
+
   const amountHuman = getArg("--amount");
   if (!amountHuman) throw new Error("Missing --amount (human readable, e.g. 1.25)");
 
@@ -60,19 +79,42 @@ async function main() {
   const walletClient = createWalletClient({ account, chain, transport: http(rpcUrl) });
 
   const chainId = await publicClient.getChainId();
-  const value = parseUnits(amountHuman, 18);
+  if (chainId !== 999) throw new Error(`Unexpected chainId=${chainId}. Expected HyperEVM chainId=999.`);
 
-  const balance = await publicClient.getBalance({ address: account.address });
+  // If user passes an address, treat it as an ERC20 on HyperEVM; otherwise resolve via registry (e.g. CRCLd).
+  const tokenAddress: Address = isAddress(tokenInput)
+    ? (tokenInput as Address)
+    : requireToken(tokenInput).hyperEvm.oft;
+
+  const tokenMeta = isAddress(tokenInput) ? undefined : requireToken(tokenInput);
+
+  const decimals = await publicClient.readContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "decimals"
+  });
+
+  const amountWei = parseUnits(amountHuman, decimals);
+
+  const balance = await publicClient.readContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [account.address]
+  });
 
   const summary = {
     rpcUrl,
     chainId,
     from: account.address,
     to: HYPERCORE_DEPOSIT_ADDRESS,
+    token: tokenMeta?.name ?? tokenInput,
+    tokenIndex: tokenMeta?.hyperCore.tokenIndex ?? null,
+    tokenAddress,
     amountHuman,
-    valueWei: value.toString(),
+    amountWei: amountWei.toString(),
     balanceWei: balance.toString(),
-    warning: "This is intended for native HYPE only."
+    note: "This sends the HyperEVM token to the HyperCore deposit address. The token must be mapped to a HyperCore tokenIndex."
   };
 
   if (hasFlag("--dry-run")) {
@@ -83,12 +125,13 @@ async function main() {
 
   await confirmOrExit(summary);
 
-  if (balance < value) throw new Error("INSUFFICIENT_HYPE_BALANCE_FOR_TRANSFER");
+  if (balance < amountWei) throw new Error("INSUFFICIENT_TOKEN_BALANCE_FOR_TRANSFER");
 
-  const hash = await walletClient.sendTransaction({
-    to: HYPERCORE_DEPOSIT_ADDRESS,
-    value,
-    chain: undefined
+  const hash = await walletClient.writeContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [HYPERCORE_DEPOSIT_ADDRESS, amountWei]
   });
 
   console.log("tx =", hash);

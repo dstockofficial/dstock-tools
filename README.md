@@ -49,10 +49,10 @@ npm run sendToHyperEvm -- CRCLd --to 0xYourRecipientAddress --amount 0.5
 ### 3) HyperEVM -> HyperCore (native HYPE only)
 
 ```bash
-npm run sendToHyperCore -- --amount 1.0
+npm run sendToHyperCore -- CRCLd --amount 0.5
 ```
 
-Note: this is intended for **native HYPE only**.
+Note: this step transfers the token on HyperEVM into HyperCore via the HyperCore deposit address. The token must be mapped on HyperCore (e.g. CRCLd -> tokenIndex 409).
 
 This repo includes a small address book for convenience. For example, on BSC you can set:
 
