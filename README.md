@@ -35,7 +35,7 @@ Recommended flow:
 ### 1) Wrap (BSC)
 
 ```bash
-npm run wrap -- CRCLd --amount 0.5 --yes
+npm run wrap -- CRCLd --amount 0.5
 ```
 
 By default, the script will **not** attempt admin-only compliance mutations. If compliance checks are required and not satisfied, it will stop and tell you what needs to be set.
@@ -43,13 +43,13 @@ By default, the script will **not** attempt admin-only compliance mutations. If 
 ### 2) Send to HyperEVM (LayerZero)
 
 ```bash
-npm run sendToHyperEvm -- CRCLd --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5 --yes
+npm run sendToHyperEvm -- CRCLd --to 0x6dc731481648Cd108120151F6ca1CbeA8277cE36 --amount 0.5
 ```
 
 ### 3) HyperEVM -> HyperCore (native HYPE only)
 
 ```bash
-npm run sendToHyperCore -- --amount 1.0 --yes
+npm run sendToHyperCore -- --amount 1.0
 ```
 
 Note: this is intended for **native HYPE only**.
