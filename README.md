@@ -48,12 +48,6 @@ npm run wrap -- CRCLd --amount 0.5 --yes
 
 By default, the script will **not** attempt admin-only compliance mutations. If compliance checks are required and not satisfied, it will stop and tell you what needs to be set.
 
-If you do have admin permission on the Compliance contract, you can enable the automatic preparation step:
-
-```bash
-npm run wrap -- CRCLd --amount 0.5 --yes --prepare-compliance
-```
-
 This repo includes a small address book for convenience. For example, on BSC you can set:
 
 - pass `CRCLd` (case-insensitive) as the wrapper name, instead of pasting the wrapper address
