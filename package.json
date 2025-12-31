@@ -1,0 +1,27 @@
+{
+  "name": "dstock-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A TypeScript-based toolbox for small Node.js scripts.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "run": "tsx src/run.ts",
+    "run:hello": "tsx src/run.ts hello",
+    "run:print-env": "tsx src/run.ts print-env",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
+
+
