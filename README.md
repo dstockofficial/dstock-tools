@@ -52,7 +52,6 @@ By default, the script will **not** attempt admin-only compliance mutations. If 
 npm run sendToHyperEvm -- CRCLd --to 0xYourRecipientAddress --amount 0.5
 ```
 
-### 3) HyperEVM -> HyperCore (native HYPE only)
 ### 3) HyperEVM -> HyperCore
 
 ```bash
