@@ -9,10 +9,14 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "flow": "tsx src/flow.ts",
-    "sendToHyperEvm": "tsx src/sendToHyperEvm.ts",
-    "sendToHyperCore": "tsx src/sendToHyperCore.ts",
-    "wrap": "tsx src/wrap.ts",
+    "bscWrap": "tsx src/bscWrap.ts",
+    "bscUnwrap": "tsx src/bscUnwrap.ts",
+    "bscToHypeEvm": "tsx src/bscToHypeEvm.ts",
+    "hypeEvmToHypeCore": "tsx src/hypeEvmToHypeCore.ts",
+    "hypeCoreToHypeEvm": "tsx src/hypeCoreToHypeEvm.ts",
+    "hypeEvmToBsc": "tsx src/hypeEvmToBsc.ts",
+    "flowBscToHypeCore": "tsx src/flowBscToHypeCore.ts",
+    "flowHypeCoreToBsc": "tsx src/flowHypeCoreToBsc.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\""

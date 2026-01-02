@@ -157,7 +157,7 @@ async function main() {
     args: [account.address]
   });
 
-  await runStep("wrap", "src/wrap.ts", [token, "--amount", wrapAmount, ...dryRun]);
+  await runStep("bscWrap", "src/bscWrap.ts", [token, "--amount", wrapAmount, ...dryRun]);
 
   if (!isDryRun) {
     await pollUntil(
@@ -206,7 +206,7 @@ async function main() {
     args: [to]
   });
 
-  await runStep("sendToHyperEvm", "src/sendToHyperEvm.ts", [token, "--to", to, "--amount", sendAmount, ...dryRun]);
+  await runStep("bscToHypeEvm", "src/bscToHypeEvm.ts", [token, "--to", to, "--amount", sendAmount, ...dryRun]);
 
   if (!isDryRun) {
     // Fees are paid in native gas (HYPE/BNB), not in the bridged token amount.
@@ -266,7 +266,7 @@ async function main() {
   const coreBalBeforeStr = await fetchHyperCoreSpotTotal(account.address, tokenIndex);
   const coreBalBefore = coreBalBeforeStr ? parseUnits(coreBalBeforeStr, tokenDecimals) : 0n;
 
-  await runStep("sendToHyperCore", "src/sendToHyperCore.ts", [token, "--amount", coreAmount, ...dryRun]);
+  await runStep("hypeEvmToHypeCore", "src/hypeEvmToHypeCore.ts", [token, "--amount", coreAmount, ...dryRun]);
 
   if (!isDryRun) {
     const minExpected = (coreAmountWei * 999n) / 1000n;

@@ -1,34 +1,54 @@
 import type { Address } from "viem";
 
+/**
+ * Token configuration for cross-chain operations between BSC and HyperCore.
+ * 
+ * To add a new token, copy the template below and fill in the addresses:
+ * 
+ * ```typescript
+ * newtoken: {
+ *   name: "NEWTOKENd",
+ *   bsc: {
+ *     wrapper: "0x...",      // DStockWrapper address on BSC
+ *     adapter: "0x...",      // DStockOFTAdapter address on BSC
+ *     underlying: "0x..."    // Original ERC20 token address on BSC
+ *   },
+ *   hyperEvm: {
+ *     oft: "0x..."           // DStockOFT address on HyperEVM
+ *   },
+ *   hyperCore: {
+ *     tokenIndex: 123        // Token index from HyperCore spotMeta API
+ *   }
+ * }
+ * ```
+ */
 export type TokenConfig = {
   // Canonical name (used for display); matching is case-insensitive.
   name: string;
 
-  // BSC
+  // BSC chain configuration
   bsc: {
-    wrapper: Address;
-    adapter: Address; // DStockOFTAdapter
-    // Underlying ERC20 that gets wrapped (REQUIRED for wrap script to actually work).
-    // NOTE: not provided in the message; set it once you confirm the real address.
-    underlying?: Address;
+    wrapper: Address;          // DStockWrapper contract
+    adapter: Address;          // DStockOFTAdapter (LayerZero bridge)
+    underlying?: Address;      // Original ERC20 token (required for wrap/unwrap)
   };
 
-  // HyperEVM
+  // HyperEVM chain configuration
   hyperEvm: {
-    oft: Address; // DStockOFT
+    oft: Address;              // DStockOFT contract
   };
 
-  // HyperCore
+  // HyperCore (L1) configuration
   hyperCore: {
-    tokenIndex: number;
-    // Optional token-specific HyperCore deposit/bridge address (if required).
-    // If omitted, scripts may fall back to the generic deposit address (0x2222...) which might only apply to native HYPE.
-    depositAddress?: Address;
+    tokenIndex: number;        // Token index from spotMeta API
+    depositAddress?: Address;  // Optional override for system/bridge address
   };
 };
 
 export const TOKENS: Record<string, TokenConfig> = {
-  // CRCLd (current production)
+  // ============================================================
+  // CRCLd - Circle USD (deployed)
+  // ============================================================
   crcld: {
     name: "CRCLd",
     bsc: {
@@ -43,6 +63,24 @@ export const TOKENS: Record<string, TokenConfig> = {
       tokenIndex: 409
     }
   }
+
+  // ============================================================
+  // Add more tokens below (copy the template from above)
+  // ============================================================
+  // example: {
+  //   name: "EXAMPLEd",
+  //   bsc: {
+  //     wrapper: "0x...",
+  //     adapter: "0x...",
+  //     underlying: "0x..."
+  //   },
+  //   hyperEvm: {
+  //     oft: "0x..."
+  //   },
+  //   hyperCore: {
+  //     tokenIndex: 999
+  //   }
+  // }
 };
 
 export function normalizeTokenName(s: string) {
