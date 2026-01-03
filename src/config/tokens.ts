@@ -12,11 +12,11 @@ import type { Address } from "viem";
  *     wrapper: "0x...",      // DStockWrapper address on BSC
  *     adapter: "0x...",      // DStockOFTAdapter address on BSC
  *     underlying: "0x...",   // Original ERC20 token address on BSC
- *     router: "0x..."        // DStockRouter address on BSC (optional)
+ *     router: "0x...",       // DStockRouter address on BSC (optional)
+ *     unwrapComposer: "0x..." // DStockUnwrapComposer address on BSC (optional)
  *   },
  *   hyperEvm: {
- *     oft: "0x...",          // DStockOFT address on HyperEVM
- *     composer: "0x..."      // DStockComposer address on HyperEVM (optional)
+ *     oft: "0x..."           // DStockOFT address on HyperEVM
  *   },
  *   hyperCore: {
  *     tokenIndex: 123        // Token index from HyperCore spotMeta API
@@ -34,12 +34,12 @@ export type TokenConfig = {
     adapter: Address;          // DStockOFTAdapter (LayerZero bridge)
     underlying?: Address;      // Original ERC20 token (required for wrap/unwrap)
     router?: Address;          // DStockRouter (optional, one-click wrap + bridge)
+    unwrapComposer?: Address;  // DStockUnwrapComposer (optional, HyperEVM -> Underlying)
   };
 
   // HyperEVM chain configuration
   hyperEvm: {
     oft: Address;              // DStockOFT contract
-    composer?: Address;        // DStockComposer (optional, handles lzCompose)
   };
 
   // HyperCore (L1) configuration

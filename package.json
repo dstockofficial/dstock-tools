@@ -18,8 +18,7 @@
     "flowBscToHypeCore": "tsx src/flowBscToHypeCore.ts",
     "flowHypeCoreToBsc": "tsx src/flowHypeCoreToBsc.ts",
     "router:underlyingToHypeEvm": "tsx src/router/underlyingToHypeEvm.ts",
-    "router:underlyingToHypeCore": "tsx src/router/underlyingToHypeCore.ts",
-    "router:dstockToHypeCore": "tsx src/router/dstockToHypeCore.ts",
+    "router:hypeEvmToUnderlying": "tsx src/router/hypeEvmToUnderlying.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\""

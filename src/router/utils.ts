@@ -65,12 +65,16 @@ export function buildLzComposeOptions(options: ComposeOptions): Hex {
 }
 
 export function buildComposeMsg(receiver?: Address): Hex {
-  if (!receiver) return "0x01";
+  if (!receiver) throw new Error("Missing receiver for composeMsg");
   return encodeAbiParameters([{ type: "address" }], [receiver]);
 }
 
 export function resolveBscRpcUrl(): string {
   return env("SRC_RPC_URL") ?? env("BSC_RPC_URL") ?? "https://bsc-dataseed.binance.org";
+}
+
+export function resolveHyperEvmRpcUrl(): string {
+  return env("HYPEREVM_RPC_URL") ?? env("HYPEEVM_RPC_URL") ?? "https://rpc.hyperliquid.xyz/evm";
 }
 
 export function resolvePrivateKey(): `0x${string}` {
@@ -90,12 +94,12 @@ export function resolveRouterAddress(token: TokenConfig, override?: string): Add
   return candidate as Address;
 }
 
-export function resolveComposerAddress(token: TokenConfig, override?: string): Address {
-  const fromEnv = env("DSTOCK_COMPOSER_ADDRESS") ?? env("COMPOSER_ADDRESS");
-  const candidate = override ?? fromEnv ?? token.hyperEvm.composer;
+export function resolveUnwrapComposerAddress(token: TokenConfig, override?: string): Address {
+  const fromEnv = env("DSTOCK_UNWRAP_COMPOSER_ADDRESS") ?? env("UNWRAP_COMPOSER_ADDRESS");
+  const candidate = override ?? fromEnv ?? token.bsc.unwrapComposer;
   if (!candidate || !isAddress(candidate)) {
     throw new Error(
-      "Missing/invalid DStockComposer address. Use --composer, set DSTOCK_COMPOSER_ADDRESS/COMPOSER_ADDRESS, or configure token.hyperEvm.composer."
+      "Missing/invalid DStockUnwrapComposer address. Use --unwrap-composer, set DSTOCK_UNWRAP_COMPOSER_ADDRESS, or configure token.bsc.unwrapComposer."
     );
   }
   return candidate as Address;
