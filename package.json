@@ -17,11 +17,15 @@
     "hypeEvmToBsc": "tsx src/hypeEvmToBsc.ts",
     "flowBscToHypeCore": "tsx src/flowBscToHypeCore.ts",
     "flowHypeCoreToBsc": "tsx src/flowHypeCoreToBsc.ts",
+    "router:underlyingToHypeEvm": "tsx src/router/underlyingToHypeEvm.ts",
+    "router:underlyingToHypeCore": "tsx src/router/underlyingToHypeCore.ts",
+    "router:dstockToHypeCore": "tsx src/router/dstockToHypeCore.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\""
   },
   "dependencies": {
+    "@layerzerolabs/lz-v2-utilities": "^3.0.148",
     "dotenv": "^16.4.7",
     "viem": "^2.23.2"
   },
