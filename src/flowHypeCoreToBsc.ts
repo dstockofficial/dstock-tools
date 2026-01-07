@@ -133,6 +133,8 @@ async function main() {
   // Pass-through flags (optional)
   const dryRun = hasFlag("--dry-run") ? ["--dry-run"] : [];
   const isDryRun = hasFlag("--dry-run");
+  // Flow scripts auto-confirm substeps unless --confirm is passed
+  const autoYes = hasFlag("--confirm") ? [] : ["--yes"];
 
   const srcRpcUrl = process.env.SRC_RPC_URL;
   if (!srcRpcUrl) throw new Error("Missing SRC_RPC_URL");
@@ -183,7 +185,7 @@ async function main() {
   });
   console.log(`[flow] HyperEVM balance before: ${formatUnits(hyperEvmBalBefore, tokenDecimals)} ${tokenMeta.name}`);
 
-  await runStep("hypeCoreToHypeEvm", "src/hypeCoreToHypeEvm.ts", [token, "--amount", spotSendAmount, ...dryRun]);
+  await runStep("hypeCoreToHypeEvm", "src/hypeCoreToHypeEvm.ts", [token, "--amount", spotSendAmount, ...dryRun, ...autoYes]);
 
   if (!isDryRun) {
     const spotSendAmountWei = parseUnits(spotSendAmount, tokenDecimals);
@@ -236,7 +238,7 @@ async function main() {
   });
   console.log(`[flow] BSC wrapper balance before: ${formatUnits(bscWrapperBalBefore, tokenDecimals)} ${tokenMeta.name}`);
 
-  await runStep("hypeEvmToBsc", "src/hypeEvmToBsc.ts", [token, "--to", to, "--amount", bridgeAmount, ...dryRun]);
+  await runStep("hypeEvmToBsc", "src/hypeEvmToBsc.ts", [token, "--to", to, "--amount", bridgeAmount, ...dryRun, ...autoYes]);
 
   if (!isDryRun) {
     const bridgeAmountWei = parseUnits(bridgeAmount, tokenDecimals);
@@ -295,7 +297,7 @@ async function main() {
   });
   console.log(`[flow] BSC underlying balance before: ${formatUnits(underlyingBalBefore, tokenDecimals)}`);
 
-  await runStep("bscUnwrap", "src/bscUnwrap.ts", [token, "--to", to, "--amount", unwrapAmount, ...dryRun]);
+  await runStep("bscUnwrap", "src/bscUnwrap.ts", [token, "--to", to, "--amount", unwrapAmount, ...dryRun, ...autoYes]);
 
   if (!isDryRun) {
     // Final check - verify underlying balance increased

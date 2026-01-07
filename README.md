@@ -73,11 +73,18 @@ Note: this step transfers the token on HyperEVM into HyperCore via the HyperCore
 
 ##### Full Flow (BSC → HyperCore)
 
-Run all 3 steps in one command (each step will ask for confirmation):
+Run all 3 steps in one command (auto-confirms each substep):
 
 ```bash
 npm run flowBscToHypeCore -- CRCLd --to 0xYourRecipientAddress --amount 0.5
 ```
+
+Options:
+- `--wrap-amount <amount>`: Override amount for step 1 (Wrap on BSC)
+- `--send-amount <amount>`: Override amount for step 2 (BSC → HyperEVM)
+- `--core-amount <amount>`: Override amount for step 3 (HyperEVM → HyperCore)
+- `--dry-run`: Show what would be sent without executing
+- `--confirm`: Require manual confirmation for each substep
 
 ---
 
@@ -94,7 +101,7 @@ This uses Hyperliquid's `spotSend` API to transfer tokens from your HyperCore sp
 Options:
 - `--to <address>`: Optional destination address on HyperEVM (defaults to caller's address)
 - `--dry-run`: Show what would be sent without executing
-- `--yes`: Skip confirmation prompt
+- `--confirm`: Require manual confirmation before executing
 
 ##### 2) HyperEVM → BSC (LayerZero)
 
@@ -106,7 +113,7 @@ This uses LayerZero OFT to send tokens from HyperEVM to BSC.
 
 Options:
 - `--dry-run`: Show what would be sent without executing
-- `--yes`: Skip confirmation prompt
+- `--confirm`: Require manual confirmation before executing
 
 ##### 3) Unwrap on BSC (CRCLd → CRCLon)
 
@@ -118,11 +125,11 @@ Options:
 - `--to <address>`: Recipient for unwrapped tokens (defaults to caller)
 - `--prepare-compliance`: Attempt to set compliance flags if you have admin permissions
 - `--dry-run`: Show what would be sent without executing
-- `--yes`: Skip confirmation prompt
+- `--confirm`: Require manual confirmation before executing
 
 ##### Full Flow (HyperCore → BSC)
 
-Run all 3 steps in one command (each step will ask for confirmation, and waits for cross-chain confirmations):
+Run all 3 steps in one command (auto-confirms each substep, waits for cross-chain confirmations):
 
 ```bash
 npm run flowHypeCoreToBsc -- CRCLd --to 0xYourBscAddress --amount 0.5
@@ -133,7 +140,7 @@ Options:
 - `--bridge-amount <amount>`: Override amount for step 2 (HyperEVM → BSC)
 - `--unwrap-amount <amount>`: Override amount for step 3 (Unwrap on BSC)
 - `--dry-run`: Show what would be sent without executing
-- `--yes`: Skip all confirmation prompts
+- `--confirm`: Require manual confirmation for each substep
 
 Note: The `--to` address must be controlled by the same `PRIVATE_KEY` since all steps use the same wallet.
 

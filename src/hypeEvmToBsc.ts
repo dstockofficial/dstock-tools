@@ -40,7 +40,8 @@ function getPositionalArg(index: number): string | undefined {
 }
 
 async function confirmOrExit(summary: unknown) {
-  if (hasFlag("--yes")) return;
+  // Skip confirmation by default; only prompt if --confirm is passed (and --yes is not)
+  if (!hasFlag("--confirm") || hasFlag("--yes")) return;
   const rl = createInterface({ input, output });
   try {
     output.write(

@@ -120,6 +120,8 @@ async function main() {
   // Pass-through flags (optional)
   const dryRun = hasFlag("--dry-run") ? ["--dry-run"] : [];
   const isDryRun = hasFlag("--dry-run");
+  // Flow scripts auto-confirm substeps unless --confirm is passed
+  const autoYes = hasFlag("--confirm") ? [] : ["--yes"];
 
   const srcRpcUrl = process.env.SRC_RPC_URL;
   if (!srcRpcUrl) throw new Error("Missing SRC_RPC_URL");
@@ -157,7 +159,7 @@ async function main() {
     args: [account.address]
   });
 
-  await runStep("bscWrap", "src/bscWrap.ts", [token, "--amount", wrapAmount, ...dryRun]);
+  await runStep("bscWrap", "src/bscWrap.ts", [token, "--amount", wrapAmount, ...dryRun, ...autoYes]);
 
   if (!isDryRun) {
     await pollUntil(
@@ -206,7 +208,7 @@ async function main() {
     args: [to]
   });
 
-  await runStep("bscToHypeEvm", "src/bscToHypeEvm.ts", [token, "--to", to, "--amount", sendAmount, ...dryRun]);
+  await runStep("bscToHypeEvm", "src/bscToHypeEvm.ts", [token, "--to", to, "--amount", sendAmount, ...dryRun, ...autoYes]);
 
   if (!isDryRun) {
     // Fees are paid in native gas (HYPE/BNB), not in the bridged token amount.
@@ -266,7 +268,7 @@ async function main() {
   const coreBalBeforeStr = await fetchHyperCoreSpotTotal(account.address, tokenIndex);
   const coreBalBefore = coreBalBeforeStr ? parseUnits(coreBalBeforeStr, tokenDecimals) : 0n;
 
-  await runStep("hypeEvmToHypeCore", "src/hypeEvmToHypeCore.ts", [token, "--amount", coreAmount, ...dryRun]);
+  await runStep("hypeEvmToHypeCore", "src/hypeEvmToHypeCore.ts", [token, "--amount", coreAmount, ...dryRun, ...autoYes]);
 
   if (!isDryRun) {
     const minExpected = (coreAmountWei * 999n) / 1000n;

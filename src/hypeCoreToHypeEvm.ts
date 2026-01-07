@@ -37,7 +37,8 @@ function env(name: string): string | undefined {
 }
 
 async function confirmOrExit(summary: unknown) {
-  if (hasFlag("--yes")) return;
+  // Skip confirmation by default; only prompt if --confirm is passed (and --yes is not)
+  if (!hasFlag("--confirm") || hasFlag("--yes")) return;
   const rl = createInterface({ input, output });
   try {
     output.write(`\nAbout to execute HyperCore -> HyperEVM (spotSend):\n${JSON.stringify(summary, null, 2)}\n\n`);
